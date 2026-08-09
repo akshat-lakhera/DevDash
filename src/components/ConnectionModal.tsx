@@ -183,21 +183,21 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
 
   const isFileBased = dbType === 'sqlite' || dbType === 'duckdb';
 
+  const isTursoDomain = (hostName: string): boolean =>
+    hostName.endsWith('.turso.io') || hostName === 'turso.io';
+
   const parseConnectionString = (urlStr: string) => {
     setRawUrl(urlStr);
     if (!urlStr.trim()) return;
     try {
       let cleanStr = urlStr.trim();
-      let isTursoUrl = false;
-      if (cleanStr.startsWith('libsql://') || cleanStr.includes('.turso.io')) {
-        isTursoUrl = true;
-        if (cleanStr.startsWith('libsql://')) {
-          cleanStr = cleanStr.replace('libsql://', 'https://');
-        }
+      let isTursoUrl = cleanStr.startsWith('libsql://');
+      if (cleanStr.startsWith('libsql://')) {
+        cleanStr = cleanStr.replace('libsql://', 'https://');
       }
 
-      const parsed = new URL(cleanStr);
-      if (isTursoUrl || parsed.hostname.includes('.turso.io')) {
+      const parsed = new URL(cleanStr.startsWith('http://') || cleanStr.startsWith('https://') ? cleanStr : `https://${cleanStr}`);
+      if (isTursoUrl || isTursoDomain(parsed.hostname)) {
         setDbType('turso');
         setPort(0);
         const token = parsed.searchParams.get('authToken') || parsed.searchParams.get('jwt') || parsed.password;
