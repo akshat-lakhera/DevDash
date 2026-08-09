@@ -173,6 +173,7 @@ pub struct ManagedConnection {
     pub redis_client: Option<redis::aio::MultiplexedConnection>,
     pub scylla_session: Option<std::sync::Arc<scylla::Session>>,
     pub clickhouse_client: Option<clickhouse::Client>,
+    pub turso_config: Option<crate::db::turso_engine::TursoConfig>,
     pub db_type: String,
     pub connection_url: String,
     pub is_read_only: bool,
@@ -211,6 +212,10 @@ impl ConnectionManager {
     // Test reachability and credentials for a connection config without storing pool
     pub async fn test_connection(details: &ConnectionDetails) -> TestConnectionResult {
         let start = Instant::now();
+        let db_kind = details.db_type.to_lowercase();
+        if db_kind == "turso" {
+            return crate::db::turso_engine::test_turso_connection(details);
+        }
         let url = match build_connection_url(details) {
             Ok(u) => u,
             Err(msg) => {
@@ -383,6 +388,7 @@ impl ConnectionManager {
                 redis_client,
                 scylla_session,
                 clickhouse_client,
+                turso_config: None,
                 db_type: db_type.to_string(),
                 connection_url: url.to_string(),
                 is_read_only,
@@ -397,6 +403,30 @@ impl ConnectionManager {
         id: &str,
         details: &ConnectionDetails,
     ) -> Result<(), String> {
+        let db_kind = details.db_type.to_lowercase();
+        if db_kind == "turso" {
+            let turso_cfg = crate::db::turso_engine::TursoConfig::from_details(details)?;
+            let dummy_pool = AnyPoolOptions::new()
+                .max_connections(1)
+                .connect_lazy("sqlite::memory:")
+                .unwrap();
+            let managed = ManagedConnection {
+                pool: dummy_pool,
+                pg_pool: None,
+                mysql_pool: None,
+                mssql_pool: None,
+                mongo_client: None,
+                redis_client: None,
+                scylla_session: None,
+                clickhouse_client: None,
+                turso_config: Some(turso_cfg),
+                db_type: details.db_type.clone(),
+                connection_url: details.host.clone(),
+                is_read_only: details.is_read_only,
+            };
+            self.pools.insert(id.to_string(), managed);
+            return Ok(());
+        }
         let url = build_connection_url(details)?;
         self.connect_with_flags(id, &url, &details.db_type, details.is_read_only)
             .await

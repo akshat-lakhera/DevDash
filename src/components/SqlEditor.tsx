@@ -48,6 +48,8 @@ export const DIALECTS: DialectOption[] = [
   { id: 'mysql', name: 'MySQL', category: 'Relational', dialectObj: MySQL },
   { id: 'mariadb', name: 'MariaDB', category: 'Relational', dialectObj: MySQL },
   { id: 'sqlite', name: 'SQLite', category: 'Relational', dialectObj: SQLite },
+  { id: 'duckdb', name: 'DuckDB', category: 'Relational', dialectObj: SQLite },
+  { id: 'turso', name: 'Turso (libSQL)', category: 'Relational', dialectObj: SQLite },
   { id: 'cockroachdb', name: 'CockroachDB', category: 'Relational', dialectObj: PostgreSQL },
   { id: 'redshift', name: 'Amazon Redshift', category: 'Cloud', dialectObj: PostgreSQL },
   { id: 'mssql', name: 'SQL Server (highlight only)', category: 'Relational', dialectObj: MSSQL },

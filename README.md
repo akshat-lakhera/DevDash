@@ -108,9 +108,9 @@ Status is from the current code, not a roadmap. Meanings:
 | PostgreSQL, MySQL/MariaDB, SQLite | Complete | `sqlx` in `src-tauri/Cargo.toml`, `pool.rs`, `executor.rs` |
 | MSSQL | Complete | `tiberius` + `bb8-tiberius` native pool |
 | Redis, MongoDB, Cassandra/Scylla, ClickHouse | Complete | Native clients on `ManagedConnection` |
-| DuckDB | Complete | `duckdb_engine.rs` (file path or `:memory:`) |
+| DuckDB, Turso (libSQL HTTP v2) | Complete | `duckdb_engine.rs`, `turso_engine.rs` |
 | CockroachDB / Redshift | Partial | Postgres wire protocol; not separately tested |
-| Oracle / Snowflake / Turso | Partial | Dedicated stubs; connect/query return structured errors |
+| Oracle / Snowflake | Partial | Dedicated stubs; connect/query return structured errors |
 | BigQuery | Missing | UI option; backend rejects |
 | Cloud IAM | Missing | Struct stub only |
 

@@ -34,5 +34,6 @@ pub mod staged_edits;
 pub mod structure_editor;
 pub mod transactions;
 pub mod redis;
+pub mod turso_engine;
 
 

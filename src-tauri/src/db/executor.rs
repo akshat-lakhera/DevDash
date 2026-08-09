@@ -1498,10 +1498,14 @@ pub async fn execute_duckdb_query(
 }
 
 pub async fn execute_libsql_query(
-    _managed_conn: &ManagedConnection,
-    _sql: &str,
+    managed_conn: &ManagedConnection,
+    sql: &str,
 ) -> Result<QueryResultPayload, String> {
-    Err("Turso (libSQL) native execution is stubbed but not yet fully implemented.".to_string())
+    let cfg = managed_conn
+        .turso_config
+        .as_ref()
+        .ok_or_else(|| "Turso connection configuration is missing.".to_string())?;
+    crate::db::turso_engine::run_turso_query(cfg, sql)
 }
 
 pub async fn execute_snowflake_query(
