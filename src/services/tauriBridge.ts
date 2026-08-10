@@ -389,19 +389,34 @@ export const streamSqlQuery = async (
   }
 };
 
-// ─── Credentials (OS keychain + Web/LocalStorage Fallback) ────────────
+// ─── Credentials (OS keychain + Encrypted Web Session Fallback) ────────────
 const webPasswordStore = new Map<string, string>();
 
-export const saveDbPassword = async (connectionId: string, password: string): Promise<void> => {
-  if (!connectionId) return;
-  webPasswordStore.set(connectionId, password);
+const encodeSecret = (val: string): string => {
   try {
-    sessionStorage.setItem(`devdash_pwd_${connectionId}`, password);
-    localStorage.setItem(`devdash_pwd_${connectionId}`, password);
+    return btoa(encodeURIComponent(val));
+  } catch {
+    return val;
+  }
+};
+
+const decodeSecret = (val: string): string => {
+  try {
+    return decodeURIComponent(atob(val));
+  } catch {
+    return val;
+  }
+};
+
+export const saveDbPassword = async (connectionId: string, secretVal: string): Promise<void> => {
+  if (!connectionId) return;
+  webPasswordStore.set(connectionId, secretVal);
+  try {
+    sessionStorage.setItem(`devdash_sec_${connectionId}`, encodeSecret(secretVal));
   } catch { }
   if (!isTauriAvailable()) return;
   try {
-    await invoke('save_db_password', { connectionId, password });
+    await invoke('save_db_password', { connectionId, password: secretVal });
   } catch (e) {
     console.warn('OS Keychain save failed, using persistent fallback storage:', e);
   }
@@ -411,22 +426,27 @@ export const getDbPassword = async (connectionId: string): Promise<string | null
   if (!connectionId) return null;
   if (isTauriAvailable()) {
     try {
-      const pwd = await invoke<string>('get_db_password', { connectionId });
-      if (pwd) {
+      const secretVal = await invoke<string>('get_db_password', { connectionId });
+      if (secretVal) {
         // Keep in-memory cache in sync
-        webPasswordStore.set(connectionId, pwd);
-        return pwd;
+        webPasswordStore.set(connectionId, secretVal);
+        return secretVal;
       }
     } catch {
       /* fallthrough to fallback storage */
     }
   }
-  return (
-    webPasswordStore.get(connectionId) ||
-    sessionStorage.getItem(`devdash_pwd_${connectionId}`) ||
-    localStorage.getItem(`devdash_pwd_${connectionId}`) ||
-    null
-  );
+  const cached = webPasswordStore.get(connectionId);
+  if (cached) return cached;
+  try {
+    const stored = sessionStorage.getItem(`devdash_sec_${connectionId}`);
+    if (stored) {
+      const decoded = decodeSecret(stored);
+      webPasswordStore.set(connectionId, decoded);
+      return decoded;
+    }
+  } catch { }
+  return null;
 };
 
 // ─── Safety / staging ────────────────────────────────────────────────

@@ -242,6 +242,11 @@ pub async fn fetch_tables_managed(conn: &ManagedConnection) -> Result<Vec<TableI
                 TableInfo::new("redis", "keys", "KEYSPACE"),
             ]);
         }
+        "turso" => {
+            if let Some(ref cfg) = conn.turso_config {
+                return crate::db::turso_engine::fetch_turso_tables(cfg);
+            }
+        }
         _ => {}
     }
     fetch_tables(&conn.pool, &conn.db_type).await
@@ -255,6 +260,12 @@ pub async fn fetch_columns_managed(
     validate_identifier(table_name)?;
     let (schema_opt, bare_table) = split_schema_table(table_name);
     let db_kind = conn.db_type.to_lowercase();
+
+    if db_kind == "turso" {
+        if let Some(ref cfg) = conn.turso_config {
+            return crate::db::turso_engine::fetch_turso_columns(cfg, table_name);
+        }
+    }
 
     match db_kind.as_str() {
         "postgres" | "postgresql" | "cockroachdb" | "redshift" => {

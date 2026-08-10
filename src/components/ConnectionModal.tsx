@@ -45,6 +45,25 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
   const [testStatus, setTestStatus] = useState<TestConnectionResultPayload | null>(null);
 
   const handleTestConnection = async () => {
+    if (dbType === 'turso') {
+      if (!host.trim() || host === 'localhost') {
+        setTestStatus({
+          success: false,
+          latency_ms: 0,
+          message: 'Turso connection requires a database host URL (e.g., libsql://test-sasuke.aws-ap-south-1.turso.io).',
+        });
+        return;
+      }
+      if (!password.trim()) {
+        setTestStatus({
+          success: false,
+          latency_ms: 0,
+          message: 'Turso connection requires an Auth Token / Password. Please paste your Turso JWT Token.',
+        });
+        return;
+      }
+    }
+
     setIsTesting(true);
     setTestStatus(null);
 
@@ -90,7 +109,7 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
       case 'cockroachdb': setPort(26257); setUser('root'); setDatabase('defaultdb'); break;
       case 'redshift': setPort(5439); setUser('awsuser'); setDatabase('dev'); break;
       case 'duckdb': setPort(0); setUser(''); setDatabase('./analytics.duckdb'); break;
-      case 'turso': setPort(0); setUser(''); setDatabase(':memory:'); break;
+      case 'turso': setPort(0); setUser(''); setDatabase('main'); setHost(prev => prev === 'localhost' ? '' : prev); break;
       case 'redis': setPort(6379); setUser(''); setDatabase('0'); break;
       case 'mssql': setPort(1433); setUser('sa'); setDatabase('master'); break;
       case 'oracle': setPort(1521); setUser('system'); setDatabase('ORCL'); break;
@@ -123,6 +142,16 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (dbType === 'turso') {
+      if (!host.trim() || host === 'localhost') {
+        alert('Turso connection requires a database host URL (e.g. libsql://test-sasuke.aws-ap-south-1.turso.io).');
+        return;
+      }
+      if (!password.trim()) {
+        alert('Turso connection requires an Auth Token / Password. Please paste your Turso JWT Token.');
+        return;
+      }
+    }
     const draft: Omit<ConnectionConfig, 'id'> = {
       name: name || `${dbType.toUpperCase()} Connection`,
       db_type: dbType,
@@ -154,12 +183,39 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
 
   const isFileBased = dbType === 'sqlite' || dbType === 'duckdb';
 
+  const isTursoDomain = (hostName: string): boolean =>
+    hostName.endsWith('.turso.io') || hostName === 'turso.io';
+
   const parseConnectionString = (urlStr: string) => {
     setRawUrl(urlStr);
     if (!urlStr.trim()) return;
     try {
-      // e.g. postgres://user:pass@host:5432/dbname?sslmode=require
-      const parsed = new URL(urlStr.trim());
+      let cleanStr = urlStr.trim();
+      let isTursoUrl = cleanStr.startsWith('libsql://');
+      if (cleanStr.startsWith('libsql://')) {
+        cleanStr = cleanStr.replace('libsql://', 'https://');
+      }
+
+      const parsed = new URL(cleanStr.startsWith('http://') || cleanStr.startsWith('https://') ? cleanStr : `https://${cleanStr}`);
+      if (isTursoUrl || isTursoDomain(parsed.hostname)) {
+        setDbType('turso');
+        setPort(0);
+        const token = parsed.searchParams.get('authToken') || parsed.searchParams.get('jwt') || parsed.password;
+        if (token) setPassword(decodeURIComponent(token));
+        const hostName = parsed.hostname;
+        setHost(hostName);
+        if (parsed.username) {
+          setUser(decodeURIComponent(parsed.username));
+        } else {
+          const parts = hostName.split('-');
+          if (parts.length > 1) setUser(parts[1].split('.')[0]);
+        }
+        setDatabase('main');
+        const firstSeg = hostName.split('.')[0];
+        setName(firstSeg ? firstSeg.charAt(0).toUpperCase() + firstSeg.slice(1) : 'Turso DB');
+        return;
+      }
+
       if (parsed.protocol.startsWith('postgres') || parsed.protocol.startsWith('postgresql')) {
         setDbType('postgres');
       } else if (parsed.protocol.startsWith('mysql')) {
@@ -323,10 +379,12 @@ export const ConnectionModal: React.FC<ConnectionModalProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block font-medium text-textMuted mb-1">Password</label>
+                      <label className="block font-medium text-textMuted mb-1">
+                        {dbType === 'turso' ? 'Auth Token / Password' : 'Password'}
+                      </label>
                       <input
                         type="password"
-                        placeholder="OS Keyring Protected"
+                        placeholder={dbType === 'turso' ? 'Paste Turso JWT Token' : 'OS Keyring Protected'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-1.5 text-text placeholder-textMuted/50 outline-none focus:ring-2 focus:ring-accent/50"

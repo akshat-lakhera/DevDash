@@ -4,6 +4,7 @@ name = "devdash_backend" # Package identifier name
 version = "1.0.2" # Semver release version
 edition = "2021" # Use modern Rust 2021 edition standards
 description = "Fast, minimal Rust backend engine for DevDash database GUI" # Brief description of backend crate
+default-run = "devdash_backend"
 
 [features]
 default = ["gui"]

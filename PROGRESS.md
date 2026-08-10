@@ -9,6 +9,7 @@ This file is a **build diary**. Product claims belong in the README capability m
 ## What this branch adds on top of main
 
 - Real **DuckDB** engine (`duckdb_engine.rs`) — file path or `:memory:`
+- Real **Turso (libSQL)** HTTP v2 pipeline engine (`turso_engine.rs`) with JWT auth & optional token parsing
 - **Parquet** export (Arrow + Snappy)
 - Query **result snapshots** + paged row diff
 - Connection **environment tags** (prod forces read-only unless explicit write opt-in)
@@ -19,7 +20,7 @@ This file is a **build diary**. Product claims belong in the README capability m
 
 | Item | Reality |
 | ---- | ------- |
-| Oracle / Snowflake / BigQuery / Turso | UI options or execution stubs |
+| Oracle / Snowflake / BigQuery | UI options or execution stubs |
 | Cloud IAM | Struct stub only |
 | Android APK | Not in release CI |
 | SOC2 / HIPAA | Local JSONL only |
@@ -27,6 +28,18 @@ This file is a **build diary**. Product claims belong in the README capability m
 | &lt;20MB / &lt;25MB RAM | Unmeasured |
 
 ## Session history
+
+---
+
+## Session 8 — 2026-08-09 (Turso libSQL HTTP v2 Pipeline Engine & Driver Validation)
+
+### 🚀 Turso libSQL Native Engine Driver — COMPLETED & PASSED
+- **Dedicated Turso Engine (`turso_engine.rs`)**: Connects directly to remote Turso databases using official HTTP v2 Pipeline API (`https://<host>/v2/pipeline`).
+- **Flexible Token & URL Parsing**: Parses `libsql://` URLs, extracts query string tokens (`?authToken=...`), supports optional auth tokens for dev instances, and enforces validation in `ConnectionModal.tsx`.
+- **Introspection & Query Execution**: Full table/view listing via `sqlite_master`, column metadata via `PRAGMA table_info(...)`, and streaming query result matrix (`QueryResultPayload`).
+- **89/89 Unit Tests Passed**: All Rust backend unit tests pass cleanly with 0 compilation errors.
+
+---
 
 ---
 
